@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
+<title>Cabin Engine</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Chakra+Petch:wght@500;600&display=swap">
+<style>
+/* Layout: an instrument cluster. The tach dial leads; controls sit in a rail beside it on wide or landscape screens and stack beneath it on a portrait phone. Single dark look on purpose, it lives on a dashboard. */
+:root{
+  --bg:#0f1417; --panel:#151c20; --line:#27323a; --ink:#e7edef; --mute:#8d9ba3;
+  --scale:#8fd3c8; --on-scale:#08201c; --warm:#f2b35c; --red:#e0524d;
+  --display:"Chakra Petch",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--ink)}
+body{
+  font:15px/1.45 var(--body);
+  padding-block:18px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent;
+}
+.app{max-width:1000px;margin:0 auto;display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}
+.top h1{margin:0;font:600 13px/1 var(--display);letter-spacing:.22em;text-transform:uppercase;color:var(--scale)}
+.top p{margin:10px 0 0;color:var(--mute);max-width:54ch}
+
+.cluster{display:grid;gap:16px;justify-items:center;min-width:0;align-content:start}
+.dial{position:relative;width:clamp(220px,min(100%,430px,calc(100svh - 110px)),430px);aspect-ratio:1}
+.dial canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.readout{position:absolute;left:0;right:0;bottom:7%;display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}
+.gear{font:600 clamp(34px,11vw,52px)/1 var(--display);font-variant-numeric:tabular-nums}
+.speed{font:500 14px var(--display);letter-spacing:.08em;color:var(--mute);font-variant-numeric:tabular-nums}
+.speed b{color:var(--ink);font-weight:600;font-size:20px;margin-right:5px}
+
+.bars{width:min(100%,430px);display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:76px minmax(0,1fr) 60px;align-items:center;gap:10px;font:500 12px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.track{position:relative;height:8px;background:var(--line);border-radius:2px;overflow:hidden}
+.fill{position:absolute;top:0;bottom:0;left:0;width:0;background:var(--warm)}
+.fill.brake{background:var(--red)}
+.fill.acc{background:var(--scale)}
+.track.bi::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--mute)}
+.val{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink);letter-spacing:.04em;text-transform:none}
+
+.rail{display:grid;gap:18px;min-width:0;align-content:start}
+.start{
+  min-height:54px;border:0;border-radius:8px;cursor:pointer;
+  background:var(--scale);color:var(--on-scale);
+  font:600 15px var(--display);letter-spacing:.14em;text-transform:uppercase;
+}
+.start[aria-pressed="true"]{background:transparent;color:var(--scale);box-shadow:inset 0 0 0 1.5px var(--scale)}
+.start:disabled{opacity:.6;cursor:default}
+.start:focus-visible,.seg button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.hint{margin:0;color:var(--mute);min-height:2.9em}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;font:500 12px var(--display);letter-spacing:.06em;color:var(--mute)}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--line)}
+.chip[data-s="ok"]{color:var(--ink)}
+.chip[data-s="ok"]::before{background:var(--scale)}
+.chip[data-s="warn"]::before{background:var(--warm)}
+
+.grp{display:grid;gap:9px;padding-top:16px;border-top:1px solid var(--line)}
+.lab{display:flex;justify-content:space-between;gap:12px;font:500 12px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.lab output{color:var(--ink);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{min-width:0;padding:11px 6px;background:none;border:0;color:var(--mute);font:500 14px var(--display);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--scale);color:var(--on-scale)}
+.seg button:focus-visible{outline-offset:-3px}
+input[type="range"]{width:100%;accent-color:var(--scale);margin:6px 0}
+select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;font:15px var(--body)}
+.chk{display:flex;align-items:center;gap:10px;color:var(--ink)}
+.chk input{width:18px;height:18px;accent-color:var(--scale)}
+.note{margin:0;padding-top:16px;border-top:1px solid var(--line);color:var(--mute);font-size:13px}
+
+@media (min-width:720px),(orientation:landscape) and (min-width:560px){
+  .app{grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);column-gap:36px;align-items:start}
+  .top{grid-column:1/-1}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+</head><body>
+<main class="app">
+  <header class="top">
+    <h1>Cabin Engine</h1>
+    <p>Turns your phone's motion into a gas-engine sound. Mount the phone, tap Start, then pull away gently so it can learn which way is forward.</p>
+  </header>
+
+  <section class="cluster" aria-label="Engine gauges">
+    <div class="dial">
+      <canvas id="dial" role="img" aria-label="Tachometer"></canvas>
+      <div class="readout">
+        <div class="gear" id="gear">N</div>
+        <div class="speed"><b id="spd">0</b>mph</div>
+      </div>
+    </div>
+    <div class="bars">
+      <div class="bar"><span>Throttle</span><div class="track"><div class="fill" id="thrFill"></div></div><span class="val" id="thrVal">0%</span></div>
+      <div class="bar"><span>Brake</span><div class="track"><div class="fill brake" id="brkFill"></div></div><span class="val" id="brkVal">0%</span></div>
+      <div class="bar"><span>Accel</span><div class="track bi"><div class="fill acc" id="accFill"></div></div><span class="val" id="accVal">0.00 g</span></div>
+    </div>
+  </section>
+
+  <section class="rail" aria-label="Controls">
+    <button type="button" id="start" class="start" aria-pressed="false">Start engine</button>
+    <p class="hint" id="hint" aria-live="polite"></p>
+    <div class="chips">
+      <span class="chip" id="cAudio" data-s="off">Audio: off</span>
+      <span class="chip" id="cMotion" data-s="off">Motion: off</span>
+      <span class="chip" id="cGps" data-s="off">GPS: off</span>
+    </div>
+
+    <div class="grp">
+      <div class="lab" id="labEng">Engine</div>
+      <div class="seg" id="engSeg" role="group" aria-labelledby="labEng">
+        <button type="button" data-v="i4" aria-pressed="false">Inline-4</button>
+        <button type="button" data-v="i6" aria-pressed="false">Inline-6</button>
+        <button type="button" data-v="v8" aria-pressed="true">V8</button>
+        <button type="button" data-v="v12" aria-pressed="false">V12</button>
+      </div>
+    </div>
+
+    <div class="grp">
+      <div class="lab" id="labIn">Input</div>
+      <div class="seg" id="inSeg" role="group" aria-labelledby="labIn">
+        <button type="button" data-v="sensor" aria-pressed="true">Phone motion</button>
+        <button type="button" data-v="manual" aria-pressed="false">Pedal slider</button>
+      </div>
+      <label class="lab" for="pedal"><span>Pedal</span></label>
+      <input type="range" id="pedal" min="0" max="100" value="0" disabled>
+    </div>
+
+    <div class="grp">
+      <label class="lab" for="vol"><span>Volume</span><output id="volVal">60%</output></label>
+      <input type="range" id="vol" min="0" max="100" value="60">
+      <label class="lab" for="sens"><span>Full throttle at</span><output id="sensVal">0.30 g</output></label>
+      <input type="range" id="sens" min="12" max="60" value="30">
+    </div>
+
+    <div class="grp">
+      <label class="lab" for="mount"><span>Phone position</span></label>
+      <select id="mount">
+        <option value="learn">Learn from my first launch</option>
+        <option value="upright">Upright mount, screen facing me</option>
+        <option value="flatFwd">Flat, top edge pointing forward</option>
+        <option value="flatBack">Flat, top edge pointing back</option>
+      </select>
+      <label class="chk"><input type="checkbox" id="flip"> Reverse direction</label>
+    </div>
+
+    <p class="note">Set everything up while parked and keep your eyes on the road. On an iPhone, turn off the silent switch so the sound plays.</p>
+  </section>
+</main>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const G = 9.80665, MPH = 2.23694;
+
+// cyl: cylinders. lump: idle lope depth. drive: distortion. sub / rasp: low and high harmonic levels.
+const ENGINES = {
+  i4:  {cyl: 4,  idle: 850, red: 7200, lump: 0.05,  drive: 2.0, bright: 1.15, sub: 0.20, rasp: 0.55},
+  i6:  {cyl: 6,  idle: 750, red: 7000, lump: 0.03,  drive: 1.8, bright: 1.00, sub: 0.25, rasp: 0.50},
+  v8:  {cyl: 8,  idle: 750, red: 6500, lump: 0.30,  drive: 2.6, bright: 0.80, sub: 0.50, rasp: 0.45},
+  v12: {cyl: 12, idle: 800, red: 8500, lump: 0.015, drive: 1.4, bright: 1.30, sub: 0.15, rasp: 0.35}
+};
+// Speed in m/s at about 94% of redline, per gear (index 0 unused).
+const VMAX = [0, 11, 19, 28, 38, 49, 62];
+
+const ls = {
+  get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
+};
+
+const S = {running: false, mode: 'sensor', eng: 'v8', gear: 1, rpm: 750, thr: 0, brk: 0, spd: 0, aS: 0,
+           shiftT: 0, since: 9, t0: 0, last: 0, autoManual: false, motionTxt: ''};
+const motion = {have: false, at: 0, lin: [0, 0, 0]};
+const gps = {ok: false, at: 0, speed: 0};
+let ctx = null, A = null, timer = null, wl = null, gpsId = null, gLP = null;
+let fwd = null, learnSum = [0, 0, 0], learnT = 0;
+
+const el = {};
+['start','hint','gear','spd','thrFill','thrVal','brkFill','brkVal','accFill','accVal','pedal','vol','volVal',
+ 'sens','sensVal','mount','flip','cAudio','cMotion','cGps','engSeg','inSeg'].forEach(id => { el[id] = $(id); });
+
+function chip(node, text, state){ node.textContent = text; node.dataset.s = state; }
+function press(group, v){
+  el[group].querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+}
+function volGain(){ return Math.pow(el.vol.value / 100, 1.6); }
+
+function refreshHint(){
+  let t;
+  if (!S.running) t = 'Tap Start. Your browser may ask for motion and location access.';
+  else if (S.mode === 'manual') t = S.autoManual ? 'Phone motion is not available in this view. The pedal slider works instead.' : 'Using the pedal slider.';
+  else if (fwd === null) t = 'Pull away gently. Your first launch teaches it which way is forward.';
+  else t = 'Running on phone motion.';
+  el.hint.textContent = t;
+}
+
+function setMode(m){
+  S.mode = m;
+  press('inSeg', m);
+  el.pedal.disabled = (m === 'sensor');
+  if (m === 'manual') el.pedal.value = 0;
+  refreshHint();
+}
+
+/* ---------- audio ---------- */
+function makeCurve(d){
+  const n = 2048, c = new Float32Array(n), k = Math.tanh(d);
+  for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * d) / k; }
+  return c;
+}
+
+function applyEngine(){
+  if (!A) return;
+  const E = ENGINES[S.eng];
+  A.shaper.curve = makeCurve(E.drive);
+  A.sub.g.gain.value = E.sub;
+  A.rasp.g.gain.value = E.rasp;
+}
+
+function buildAudio(){
+  const Ctor = window.AudioContext || window.webkitAudioContext;
+  if (!Ctor) return false;
+  try { ctx = new Ctor({latencyHint: 'interactive'}); } catch (e) { ctx = null; return false; }
+  const master = ctx.createGain(), comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.knee.value = 10; comp.ratio.value = 8; comp.attack.value = 0.004; comp.release.value = 0.15;
+  master.gain.value = volGain();
+  master.connect(comp); comp.connect(ctx.destination);
+
+  const eng = ctx.createGain(); eng.gain.value = 0; eng.connect(master);
+  const body = ctx.createBiquadFilter(); body.type = 'peaking'; body.frequency.value = 115; body.Q.value = 1.1; body.gain.value = 7; body.connect(eng);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.2; lp.connect(body);
+  const shaper = ctx.createWaveShaper(); shaper.oversample = '2x'; shaper.connect(lp);
+  const lump = ctx.createGain(); lump.connect(shaper);
+  const mixer = ctx.createGain(); mixer.gain.value = 0.6; mixer.connect(lump);
+
+  const osc = (type, gain) => {
+    const o = ctx.createOscillator(); o.type = type;
+    const g = ctx.createGain(); g.gain.value = gain;
+    o.connect(g); g.connect(mixer); o.start();
+    return {o, g};
+  };
+  const a = osc('sawtooth', 0.5), a2 = osc('sawtooth', 0.35), sub = osc('square', 0.2), rasp = osc('sawtooth', 0.2);
+  a2.o.detune.value = 9;
+
+  // Cam-rate wobble gives the uneven idle of a cross-plane V8.
+  const cam = ctx.createOscillator(); cam.type = 'sine';
+  const camG = ctx.createGain(); camG.gain.value = 0;
+  cam.connect(camG); camG.connect(lump.gain); cam.start();
+
+  // Intake and exhaust noise, kept out of the distortion stage.
+  const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), nd = nb.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const ns = ctx.createBufferSource(); ns.buffer = nb; ns.loop = true;
+  const nbp = ctx.createBiquadFilter(); nbp.type = 'bandpass'; nbp.Q.value = 0.7;
+  const ng = ctx.createGain(); ng.gain.value = 0;
+  ns.connect(nbp); nbp.connect(ng); ng.connect(eng); ns.start();
+
+  A = {master, eng, lp, shaper, lump, a, a2, sub, rasp, cam, camG, nbp, ng};
+  applyEngine();
+  return true;
+}
+
+function updateAudio(){
+  if (!A || !ctx) return;
+  const E = ENGINES[S.eng], t = ctx.currentTime, span = E.red - E.idle;
+  const rpmN = clamp((S.rpm - E.idle) / span, 0, 1.1);
+  const f = S.rpm / 60 * E.cyl / 2;
+  const set = (p, v, tc) => p.setTargetAtTime(v, t, tc);
+  set(A.a.o.frequency, f, 0.02);
+  set(A.a2.o.frequency, f, 0.02);
+  set(A.sub.o.frequency, f * 0.5, 0.02);
+  set(A.rasp.o.frequency, f * 2, 0.02);
+  set(A.cam.frequency, S.rpm / 120, 0.05);
+  const depth = E.lump * (1 - 0.6 * rpmN);
+  set(A.camG.gain, depth, 0.1);
+  set(A.lump.gain, 1 - depth, 0.1);
+  set(A.lp.frequency, (320 + rpmN * 1500 + S.thr * 2700) * E.bright, 0.04);
+  set(A.nbp.frequency, 500 + S.rpm * 0.35, 0.05);
+  set(A.ng.gain, 0.012 + 0.17 * S.thr * S.thr + 0.04 * rpmN * S.thr, 0.05);
+  const dip = S.shiftT > 0.08 ? 0.12 : 1;
+  const cut = (S.thr < 0.05 && S.rpm > E.idle * 1.8) ? 0.45 : 1;
+  const lim = (S.rpm > E.red * 0.99 && S.thr > 0.6) ? 0.55 : 1;
+  set(A.eng.gain, (0.3 + 0.7 * S.thr) * dip * cut * lim * 0.9, 0.02);
+}
+
+/* ---------- sensors ---------- */
+function onMotion(e){
+  const a = e.acceleration, ag = e.accelerationIncludingGravity;
+  let x, y, z;
+  if (a && a.x != null) { x = a.x; y = a.y; z = a.z; }
+  else if (ag && ag.x != null) {
+    // No gravity-free reading on this device: strip a slow gravity estimate instead.
+    if (!gLP) gLP = [ag.x, ag.y, ag.z];
+    gLP[0] += (ag.x - gLP[0]) * 0.02; gLP[1] += (ag.y - gLP[1]) * 0.02; gLP[2] += (ag.z - gLP[2]) * 0.02;
+    x = ag.x - gLP[0]; y = ag.y - gLP[1]; z = ag.z - gLP[2];
+  } else return;
+  motion.have = true; motion.at = performance.now(); motion.lin = [x, y, z];
+}
+
+// Returns forward acceleration in m/s^2, or null when there is no live data.
+function sensorInput(dt, now){
+  if (!motion.have || now - motion.at > 800) return null;
+  const l = motion.lin;
+  if (fwd === null) {
+    const m = Math.hypot(l[0], l[1], l[2]);
+    if (m > 1.1) { learnSum[0] += l[0] * dt; learnSum[1] += l[1] * dt; learnSum[2] += l[2] * dt; learnT += dt; }
+    if ((m <= 0.6 && learnT > 0.35) || learnT > 1.2) {
+      const L = Math.hypot(learnSum[0], learnSum[1], learnSum[2]);
+      if (L > 0.15) { fwd = learnSum.map(v => v / L); el.flip.checked = false; refreshHint(); }
+      learnSum = [0, 0, 0]; learnT = 0;
+    }
+    return 0;
+  }
+  return (l[0] * fwd[0] + l[1] * fwd[1] + l[2] * fwd[2]) * (el.flip.checked ? -1 : 1);
+}
+
+function checkMotionStatus(now){
+  let txt, st;
+  if (!motion.have) {
+    if (now - S.t0 > 2500) {
+      txt = 'Motion: unavailable'; st = 'warn';
+      if (!S.autoManual) { S.autoManual = true; setMode('manual'); }
+    } else { txt = 'Motion: waiting'; st = 'off'; }
+  } else if (now - motion.at > 800) { txt = 'Motion: no signal'; st = 'warn'; }
+  else { txt = 'Motion: live'; st = 'ok'; }
+  if (txt !== S.motionTxt) { S.motionTxt = txt; chip(el.cMotion, txt, st); }
+}
+
+function startGPS(){
+  if (!navigator.geolocation) { chip(el.cGps, 'GPS: unsupported', 'warn'); return; }
+  try {
+    gpsId = navigator.geolocation.watchPosition(p => {
+      const v = p.coords.speed;
+      if (v != null && !isNaN(v)) { gps.ok = true; gps.at = performance.now(); gps.speed = v; chip(el.cGps, 'GPS: live', 'ok'); }
+      else chip(el.cGps, 'GPS: no speed', 'warn');
+    }, () => { chip(el.cGps, 'GPS: off', 'warn'); },
+    {enableHighAccuracy: true, maximumAge: 500, timeout: 15000});
+    chip(el.cGps, 'GPS: waiting', 'off');
+  } catch (e) { chip(el.cGps, 'GPS: off', 'warn'); }
+}
+
+async function lockScreen(){
+  try { if (navigator.wakeLock && S.running) wl = await navigator.wakeLock.request('screen'); } catch (e) { wl = null; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.running) lockScreen(); });
+
+/* ---------- simulation ---------- */
+function tick(){
+  const now = performance.now();
+  const dt = clamp((now - S.last) / 1000, 0.001, 0.1);
+  S.last = now;
+  if (ctx && ctx.state === 'suspended') ctx.resume();
+  const E = ENGINES[S.eng], span = E.red - E.idle;
+
+  let thrIn = 0, brkIn = 0;
+  if (S.mode === 'sensor') {
+    const acc = sensorInput(dt, now);
+    if (acc === null) S.aS *= Math.pow(0.1, dt);
+    else {
+      S.aS += (acc - S.aS) * (1 - Math.exp(-dt / 0.12));
+      const full = Math.max(0.5, el.sens.value / 100 * G);
+      thrIn = clamp((S.aS - 0.25) / (full - 0.25), 0, 1);
+      brkIn = clamp((-S.aS - 0.5) / (0.3 * G), 0, 1);
+    }
+    checkMotionStatus(now);
+  } else thrIn = el.pedal.value / 100;
+
+  S.thr += (thrIn - S.thr) * (1 - Math.exp(-dt / (thrIn > S.thr ? 0.07 : 0.22)));
+  S.brk += (brkIn - S.brk) * (1 - Math.exp(-dt / 0.1));
+
+  // Virtual drivetrain: speed follows throttle, with GPS speed taking over when it is live.
+  const vAcc = S.thr * 5.5 * Math.max(0.25, 1 - S.spd / 60) - (0.12 + 0.0009 * S.spd * S.spd) - S.brk * 6;
+  S.spd = Math.max(0, S.spd + vAcc * dt);
+  if (S.mode === 'sensor' && gps.ok && now - gps.at < 3000) S.spd += (gps.speed - S.spd) * Math.min(1, dt * 3);
+  if (S.mode === 'manual') S.aS = (S.spd > 0 || vAcc > 0) ? vAcc : 0;
+
+  // Automatic gearbox.
+  const rpmIn = g => S.spd * 0.94 * E.red / VMAX[g];
+  const up = t => E.idle + (0.50 + 0.42 * t) * span;
+  const dn = t => E.idle + (0.16 + 0.20 * t) * span;
+  S.shiftT = Math.max(0, S.shiftT - dt);
+  S.since += dt;
+  if (S.since > 0.7) {
+    const r = rpmIn(S.gear);
+    if (S.gear < 6 && r > up(S.thr)) { S.gear++; S.shiftT = 0.22; S.since = 0; }
+    else if (S.gear > 1 && rpmIn(S.gear - 1) < up(S.thr) * 1.05 &&
+             (r < dn(S.thr) || (S.thr > 0.85 && r < 0.42 * E.red && rpmIn(S.gear - 1) < 0.93 * E.red))) {
+      S.gear--; S.shiftT = 0.18; S.since = 0;
+    }
+  }
+
+  // Engine speed: clutch slip lets it rev freely when the car is nearly stopped.
+  let target = Math.max(E.idle, rpmIn(S.gear));
+  if (S.spd < 1.5) target = Math.max(target, E.idle + S.thr * 3600 * (1 - S.spd / 1.5));
+  const k = target > S.rpm ? 6 + 10 * S.thr : 3.2;
+  S.rpm += (target - S.rpm) * (1 - Math.exp(-dt * k));
+  S.rpm = clamp(S.rpm, E.idle * 0.9, E.red * 1.02);
+  const wobble = S.rpm < E.idle * 1.15 ? Math.sin(now / 310) * 9 + Math.sin(now / 97) * 5 : 0;
+  S.rpm += wobble * dt * 6;
+
+  if (S.mode === 'sensor') el.pedal.value = Math.round(S.thr * 100);
+  updateAudio();
+}
+
+/* ---------- display ---------- */
+const cv = $('dial'), g2 = cv.getContext('2d');
+const css = getComputedStyle(document.documentElement);
+const C = n => css.getPropertyValue(n).trim();
+function arc(cx, cy, r, a, b){ g2.beginPath(); g2.arc(cx, cy, r, a, b); g2.stroke(); }
+
+function draw(){
+  const E = ENGINES[S.eng], max = Math.ceil((E.red + 500) / 1000) * 1000;
+  const w = cv.clientWidth, h = cv.clientHeight, dpr = Math.min(window.devicePixelRatio || 1, 2);
+  if (!w || !h) return;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  g2.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g2.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 4, a0 = Math.PI * 0.75, a1 = Math.PI * 2.25;
+  const ang = r => a0 + (a1 - a0) * clamp(r / max, 0, 1);
+  const font = (wt, px) => `${wt} ${Math.round(px)}px "Chakra Petch",system-ui,sans-serif`;
+
+  g2.lineCap = 'butt';
+  g2.lineWidth = R * 0.06;
+  g2.strokeStyle = C('--line'); arc(cx, cy, R * 0.9, a0, a1);
+  g2.globalAlpha = 0.5; g2.strokeStyle = C('--red'); arc(cx, cy, R * 0.9, ang(E.red * 0.94), a1); g2.globalAlpha = 1;
+  const rp = clamp(S.rpm, 0, max);
+  g2.strokeStyle = rp > E.red * 0.94 ? C('--red') : C('--scale');
+  arc(cx, cy, R * 0.9, a0, Math.max(a0 + 0.001, ang(rp)));
+
+  g2.fillStyle = C('--mute'); g2.textAlign = 'center'; g2.textBaseline = 'middle';
+  g2.font = font(500, R * 0.085);
+  for (let r = 0; r <= max; r += 250) {
+    const major = r % 1000 === 0, mid = r % 500 === 0, a = ang(r), c = Math.cos(a), s = Math.sin(a);
+    const r1 = R * 0.82, r2 = major ? R * 0.72 : mid ? R * 0.76 : R * 0.78;
+    g2.lineWidth = major ? 2 : 1;
+    g2.strokeStyle = major ? C('--ink') : C('--mute');
+    g2.beginPath(); g2.moveTo(cx + c * r1, cy + s * r1); g2.lineTo(cx + c * r2, cy + s * r2); g2.stroke();
+    if (major) g2.fillText(String(r / 1000), cx + c * R * 0.62, cy + s * R * 0.62);
+  }
+  g2.font = font(500, R * 0.06);
+  g2.fillText('RPM x1000', cx, cy - R * 0.27);
+
+  const na = ang(rp), nc = Math.cos(na), ns = Math.sin(na);
+  g2.strokeStyle = C('--ink'); g2.lineWidth = Math.max(2, R * 0.018); g2.lineCap = 'round';
+  g2.beginPath(); g2.moveTo(cx - nc * R * 0.08, cy - ns * R * 0.08); g2.lineTo(cx + nc * R * 0.8, cy + ns * R * 0.8); g2.stroke();
+  g2.fillStyle = C('--panel'); g2.lineWidth = 2;
+  g2.beginPath(); g2.arc(cx, cy, R * 0.045, 0, Math.PI * 2); g2.fill(); g2.stroke();
+  g2.fillStyle = C('--ink'); g2.font = font(600, R * 0.12);
+  g2.fillText(String(Math.round(S.rpm / 10) * 10), cx, cy + R * 0.3);
+}
+
+function ui(){
+  el.gear.textContent = (!S.running || (S.spd < 0.6 && S.thr < 0.05)) ? 'N' : String(S.gear);
+  el.spd.textContent = Math.round(S.spd * MPH);
+  el.thrFill.style.width = (S.thr * 100) + '%'; el.thrVal.textContent = Math.round(S.thr * 100) + '%';
+  el.brkFill.style.width = (S.brk * 100) + '%'; el.brkVal.textContent = Math.round(S.brk * 100) + '%';
+  const ag = S.aS / G, w = clamp(Math.abs(ag) / 0.6, 0, 1) * 50;
+  el.accFill.style.left = (ag >= 0 ? 50 : 50 - w) + '%'; el.accFill.style.width = w + '%';
+  el.accVal.textContent = (ag > 0.005 ? '+' : ag < -0.005 ? '-' : '') + Math.abs(ag).toFixed(2) + ' g';
+}
+function frame(){ draw(); ui(); requestAnimationFrame(frame); }
+
+/* ---------- start / stop ---------- */
+async function start(){
+  if (S.running) { stop(); return; }
+  el.start.disabled = true;
+  if (!buildAudio()) { el.hint.textContent = 'This browser cannot play synthesized audio.'; el.start.disabled = false; return; }
+  ctx.resume();
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  let perm = 'granted';
+  try {
+    const D = window.DeviceMotionEvent;
+    if (D && typeof D.requestPermission === 'function') perm = await D.requestPermission();
+  } catch (e) { perm = 'denied'; }
+
+  S.autoManual = false; S.motionTxt = ''; motion.have = false; gLP = null;
+  if (perm === 'granted') { window.addEventListener('devicemotion', onMotion); setMode('sensor'); chip(el.cMotion, 'Motion: waiting', 'off'); }
+  else { S.autoManual = true; setMode('manual'); S.motionTxt = 'Motion: blocked'; chip(el.cMotion, 'Motion: blocked', 'warn'); }
+
+  S.running = true;
+  S.t0 = S.last = performance.now();
+  timer = setInterval(tick, 20);
+  startGPS();
+  lockScreen();
+  el.start.setAttribute('aria-pressed', 'true'); el.start.textContent = 'Stop engine'; el.start.disabled = false;
+  chip(el.cAudio, 'Audio: on', 'ok');
+  refreshHint();
+}
+
+function stop(){
+  S.running = false;
+  clearInterval(timer); timer = null;
+  window.removeEventListener('devicemotion', onMotion);
+  if (gpsId !== null && navigator.geolocation) { try { navigator.geolocation.clearWatch(gpsId); } catch (e) {} gpsId = null; }
+  if (wl) { try { wl.release(); } catch (e) {} wl = null; }
+  if (A && ctx) {
+    A.eng.gain.cancelScheduledValues(ctx.currentTime);
+    A.eng.gain.setTargetAtTime(0, ctx.currentTime, 0.08);
+    const c = ctx; setTimeout(() => { try { c.close(); } catch (e) {} }, 500);
+  }
+  A = null; ctx = null;
+  Object.assign(S, {thr: 0, brk: 0, spd: 0, aS: 0, gear: 1, rpm: ENGINES[S.eng].idle});
+  motion.have = false; gps.ok = false;
+  el.start.setAttribute('aria-pressed', 'false'); el.start.textContent = 'Start engine';
+  chip(el.cAudio, 'Audio: off', 'off'); chip(el.cMotion, 'Motion: off', 'off'); chip(el.cGps, 'GPS: off', 'off');
+  refreshHint();
+}
+
+/* ---------- controls ---------- */
+function applyMount(){
+  const v = el.mount.value;
+  learnSum = [0, 0, 0]; learnT = 0;
+  fwd = v === 'learn' ? null : v === 'upright' ? [0, 0, -1] : v === 'flatFwd' ? [0, 1, 0] : [0, -1, 0];
+  refreshHint();
+}
+
+el.start.addEventListener('click', start);
+el.engSeg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.eng = b.dataset.v; press('engSeg', S.eng); applyEngine(); ls.set('ce.eng', S.eng);
+  if (!S.running) S.rpm = ENGINES[S.eng].idle;
+});
+el.inSeg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.v); });
+['pointerup', 'pointercancel', 'touchend'].forEach(ev => el.pedal.addEventListener(ev, () => { if (S.mode === 'manual') el.pedal.value = 0; }));
+el.vol.addEventListener('input', () => {
+  el.volVal.textContent = el.vol.value + '%';
+  if (A && ctx) A.master.gain.setTargetAtTime(volGain(), ctx.currentTime, 0.02);
+  ls.set('ce.vol', el.vol.value);
+});
+el.sens.addEventListener('input', () => { el.sensVal.textContent = (el.sens.value / 100).toFixed(2) + ' g'; ls.set('ce.sens', el.sens.value); });
+el.mount.addEventListener('change', () => { applyMount(); ls.set('ce.mount', el.mount.value); });
+el.flip.addEventListener('change', () => ls.set('ce.flip', el.flip.checked ? '1' : '0'));
+
+// Restore saved settings.
+(function init(){
+  const e = ls.get('ce.eng'); if (e && ENGINES[e]) S.eng = e;
+  const v = ls.get('ce.vol'); if (v !== null && !isNaN(+v)) el.vol.value = clamp(+v, 0, 100);
+  const s = ls.get('ce.sens'); if (s !== null && !isNaN(+s)) el.sens.value = clamp(+s, 12, 60);
+  const m = ls.get('ce.mount'); if (m && [...el.mount.options].some(o => o.value === m)) el.mount.value = m;
+  el.flip.checked = ls.get('ce.flip') === '1';
+  S.rpm = ENGINES[S.eng].idle;
+  press('engSeg', S.eng);
+  el.volVal.textContent = el.vol.value + '%';
+  el.sensVal.textContent = (el.sens.value / 100).toFixed(2) + ' g';
+  applyMount();
+  setMode('sensor');
+  requestAnimationFrame(frame);
+})();
+})();
+</script>
+</body></html>
