@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <style>:root{padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}</style>
-<title>Cabin Engine</title>
+<title>Tesla Cabin Engine</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Chakra+Petch:wght@500;600&display=swap">
 <style>
-/* Layout: an instrument cluster. The tach dial leads; controls sit in a rail beside it on wide or landscape screens and stack beneath it on a portrait phone. Single dark look on purpose, it lives on a dashboard. */
+/* Layout: an instrument cluster. The tach dial leads; controls sit in a rail beside it on wide or landscape screens and stack beneath it on a portrait phone. Single dark look on purpose, it lives on a dashboard. Controls carry data-for so each input mode shows only its own. */
 :root{
   --bg:#0f1417; --panel:#151c20; --line:#27323a; --ink:#e7edef; --mute:#8d9ba3;
   --scale:#8fd3c8; --on-scale:#08201c; --warm:#f2b35c; --red:#e0524d;
@@ -84,8 +84,8 @@ select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);bor
 </head><body>
 <main class="app">
   <header class="top">
-    <h1>Cabin Engine</h1>
-    <p>Turns your phone's motion into a gas-engine sound. Mount the phone, tap Start, then pull away gently so it can learn which way is forward.</p>
+    <h1>Tesla Cabin Engine</h1>
+    <p>Не важно с какой скоростью ты двигаешься, главное не останавливайся, а то остановка станет последней! - Кама Пуля</p>
   </header>
 
   <section class="cluster" aria-label="Engine gauges">
@@ -98,8 +98,8 @@ select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);bor
     </div>
     <div class="bars">
       <div class="bar"><span>Throttle</span><div class="track"><div class="fill" id="thrFill"></div></div><span class="val" id="thrVal">0%</span></div>
-      <div class="bar"><span>Brake</span><div class="track"><div class="fill brake" id="brkFill"></div></div><span class="val" id="brkVal">0%</span></div>
-      <div class="bar"><span>Accel</span><div class="track bi"><div class="fill acc" id="accFill"></div></div><span class="val" id="accVal">0.00 g</span></div>
+      <div class="bar" data-for="gps motion"><span>Brake</span><div class="track"><div class="fill brake" id="brkFill"></div></div><span class="val" id="brkVal">0%</span></div>
+      <div class="bar" data-for="gps motion"><span>Accel</span><div class="track bi"><div class="fill acc" id="accFill"></div></div><span class="val" id="accVal">0.00 g</span></div>
     </div>
   </section>
 
@@ -108,8 +108,17 @@ select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);bor
     <p class="hint" id="hint" aria-live="polite"></p>
     <div class="chips">
       <span class="chip" id="cAudio" data-s="off">Audio: off</span>
-      <span class="chip" id="cMotion" data-s="off">Motion: off</span>
-      <span class="chip" id="cGps" data-s="off">GPS: off</span>
+      <span class="chip" id="cGps" data-s="off" data-for="gps motion">GPS: off</span>
+      <span class="chip" id="cMotion" data-s="off" data-for="motion">Motion: off</span>
+    </div>
+
+    <div class="grp">
+      <div class="lab" id="labIn">Input</div>
+      <div class="seg" id="inSeg" role="group" aria-labelledby="labIn">
+        <button type="button" data-v="gps" aria-pressed="true">Car GPS</button>
+        <button type="button" data-v="motion" aria-pressed="false">Phone motion</button>
+        <button type="button" data-v="pedal" aria-pressed="false">Pedal</button>
+      </div>
     </div>
 
     <div class="grp">
@@ -122,12 +131,7 @@ select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);bor
       </div>
     </div>
 
-    <div class="grp">
-      <div class="lab" id="labIn">Input</div>
-      <div class="seg" id="inSeg" role="group" aria-labelledby="labIn">
-        <button type="button" data-v="sensor" aria-pressed="true">Phone motion</button>
-        <button type="button" data-v="manual" aria-pressed="false">Pedal slider</button>
-      </div>
+    <div class="grp" data-for="pedal">
       <label class="lab" for="pedal"><span>Pedal</span></label>
       <input type="range" id="pedal" min="0" max="100" value="0" disabled>
     </div>
@@ -135,11 +139,14 @@ select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);bor
     <div class="grp">
       <label class="lab" for="vol"><span>Volume</span><output id="volVal">60%</output></label>
       <input type="range" id="vol" min="0" max="100" value="60">
+    </div>
+
+    <div class="grp" data-for="gps motion">
       <label class="lab" for="sens"><span>Full throttle at</span><output id="sensVal">0.30 g</output></label>
       <input type="range" id="sens" min="12" max="60" value="30">
     </div>
 
-    <div class="grp">
+    <div class="grp" data-for="motion">
       <label class="lab" for="mount"><span>Phone position</span></label>
       <select id="mount">
         <option value="learn">Learn from my first launch</option>
@@ -150,7 +157,7 @@ select{width:100%;padding:11px 10px;background:var(--panel);color:var(--ink);bor
       <label class="chk"><input type="checkbox" id="flip"> Reverse direction</label>
     </div>
 
-    <p class="note">Set everything up while parked and keep your eyes on the road. On an iPhone, turn off the silent switch so the sound plays.</p>
+    <p class="note">Безделье - это игрушка дьявола.</p>
   </section>
 </main>
 
@@ -170,17 +177,18 @@ const ENGINES = {
 };
 // Speed in m/s at about 94% of redline, per gear (index 0 unused).
 const VMAX = [0, 11, 19, 28, 38, 49, 62];
+const MODES = ['gps', 'motion', 'pedal'];
 
 const ls = {
   get(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }
 };
 
-const S = {running: false, mode: 'sensor', eng: 'v8', gear: 1, rpm: 750, thr: 0, brk: 0, spd: 0, aS: 0,
-           shiftT: 0, since: 9, t0: 0, last: 0, autoManual: false, motionTxt: ''};
+const S = {running: false, mode: 'gps', eng: 'v8', gear: 1, rpm: 750, thr: 0, brk: 0, spd: 0, aS: 0,
+           shiftT: 0, since: 9, last: 0, tm: 0, motionTxt: ''};
 const motion = {have: false, at: 0, lin: [0, 0, 0]};
-const gps = {ok: false, at: 0, speed: 0};
-let ctx = null, A = null, timer = null, wl = null, gpsId = null, gLP = null;
+const gps = {ok: false, at: 0, speed: 0, acc: 0};
+let ctx = null, A = null, timer = null, wl = null, gpsId = null, gLP = null, prevFix = null, motionOn = false, lastHint = '';
 let fwd = null, learnSum = [0, 0, 0], learnT = 0;
 
 const el = {};
@@ -193,21 +201,34 @@ function press(group, v){
 }
 function volGain(){ return Math.pow(el.vol.value / 100, 1.6); }
 
-function refreshHint(){
-  let t;
-  if (!S.running) t = 'Tap Start. Your browser may ask for motion and location access.';
-  else if (S.mode === 'manual') t = S.autoManual ? 'Phone motion is not available in this view. The pedal slider works instead.' : 'Using the pedal slider.';
-  else if (fwd === null) t = 'Pull away gently. Your first launch teaches it which way is forward.';
-  else t = 'Running on phone motion.';
-  el.hint.textContent = t;
+function hintText(){
+  const m = S.mode, now = performance.now();
+  if (!S.running) {
+    return m === 'gps' ? 'Tap Start. Your browser will ask for location access.'
+         : m === 'motion' ? 'Tap Start. Your browser may ask for motion and location access.'
+         : 'Tap Start, then drag the pedal.';
+  }
+  if (m === 'pedal') return 'Drag the pedal to rev the engine.';
+  const gpsOk = gps.ok && now - gps.at < 3500;
+  if (m === 'gps') return gpsOk ? 'Following the car with GPS.' : 'Waiting for a GPS speed. It starts once the car is moving.';
+  if (S.motionTxt === 'Motion: blocked') return 'Motion access was blocked. Allow it in your browser settings, or switch to Car GPS.';
+  if (!motion.have) return 'Waiting for motion data from this device.';
+  if (fwd === null) return 'Pull away gently. Your first launch teaches it which way is forward.';
+  return gpsOk ? 'Running on phone motion with GPS speed.' : 'Running on phone motion. Waiting for a GPS speed.';
+}
+
+function applyVisibility(){
+  document.querySelectorAll('[data-for]').forEach(n => { n.hidden = !n.dataset.for.split(' ').includes(S.mode); });
 }
 
 function setMode(m){
   S.mode = m;
   press('inSeg', m);
-  el.pedal.disabled = (m === 'sensor');
-  if (m === 'manual') el.pedal.value = 0;
-  refreshHint();
+  el.pedal.disabled = (m !== 'pedal');
+  if (m === 'pedal') el.pedal.value = 0;
+  applyVisibility();
+  ls.set('ce.mode', m);
+  syncSensors();
 }
 
 /* ---------- audio ---------- */
@@ -292,6 +313,48 @@ function updateAudio(){
 }
 
 /* ---------- sensors ---------- */
+function haversine(la1, lo1, la2, lo2){
+  const r = Math.PI / 180, dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) ** 2;
+  return 12742000 * Math.asin(Math.sqrt(h));
+}
+
+function onGps(p){
+  const now = performance.now(), c = p.coords;
+  let v = c.speed;
+  const ts = p.timestamp || Date.now();
+  if ((v == null || isNaN(v)) && prevFix) {
+    // No speed from the device: work it out from the distance between fixes.
+    const dtm = (ts - prevFix.ts) / 1000;
+    if (dtm > 0.3 && dtm < 5) v = haversine(prevFix.lat, prevFix.lon, c.latitude, c.longitude) / dtm;
+  }
+  prevFix = {lat: c.latitude, lon: c.longitude, ts};
+  if (v == null || isNaN(v)) { chip(el.cGps, 'GPS: no speed', 'warn'); return; }
+  if (gps.ok) {
+    const dts = (now - gps.at) / 1000;
+    if (dts > 0.25 && dts < 3) gps.acc = gps.acc * 0.4 + ((v - gps.speed) / dts) * 0.6;
+  } else gps.acc = 0;
+  gps.ok = true; gps.at = now; gps.speed = v;
+  chip(el.cGps, 'GPS: live', 'ok');
+}
+
+function startGPS(){
+  if (gpsId !== null) return;
+  if (!navigator.geolocation) { chip(el.cGps, 'GPS: unsupported', 'warn'); return; }
+  try {
+    gpsId = navigator.geolocation.watchPosition(onGps,
+      () => { chip(el.cGps, 'GPS: blocked', 'warn'); },
+      {enableHighAccuracy: true, maximumAge: 500, timeout: 15000});
+    chip(el.cGps, 'GPS: waiting', 'off');
+  } catch (e) { chip(el.cGps, 'GPS: unavailable', 'warn'); }
+}
+
+function stopGPS(){
+  if (gpsId !== null && navigator.geolocation) { try { navigator.geolocation.clearWatch(gpsId); } catch (e) {} }
+  gpsId = null; prevFix = null; gps.ok = false; gps.acc = 0;
+  chip(el.cGps, 'GPS: off', 'off');
+}
+
 function onMotion(e){
   const a = e.acceleration, ag = e.accelerationIncludingGravity;
   let x, y, z;
@@ -305,6 +368,32 @@ function onMotion(e){
   motion.have = true; motion.at = performance.now(); motion.lin = [x, y, z];
 }
 
+async function enableMotion(){
+  let perm = 'granted';
+  try {
+    const D = window.DeviceMotionEvent;
+    if (D && typeof D.requestPermission === 'function') perm = await D.requestPermission();
+  } catch (e) { perm = 'denied'; }
+  if (perm === 'granted') {
+    window.addEventListener('devicemotion', onMotion);
+    motionOn = true; motion.have = false; gLP = null; S.tm = performance.now(); S.motionTxt = '';
+    chip(el.cMotion, 'Motion: waiting', 'off');
+  } else { S.motionTxt = 'Motion: blocked'; chip(el.cMotion, 'Motion: blocked', 'warn'); }
+}
+
+// Starts and stops sensors to match the chosen input. Motion permission is only asked for in Phone motion mode.
+async function syncSensors(){
+  if (!S.running) return;
+  const wantMotion = S.mode === 'motion', wantGps = S.mode === 'gps' || S.mode === 'motion';
+  if (wantMotion && !motionOn && S.motionTxt !== 'Motion: blocked') await enableMotion();
+  if (!wantMotion && motionOn) {
+    window.removeEventListener('devicemotion', onMotion);
+    motionOn = false; motion.have = false; S.motionTxt = '';
+    chip(el.cMotion, 'Motion: off', 'off');
+  }
+  if (wantGps) startGPS(); else if (gpsId !== null) stopGPS();
+}
+
 // Returns forward acceleration in m/s^2, or null when there is no live data.
 function sensorInput(dt, now){
   if (!motion.have || now - motion.at > 800) return null;
@@ -314,7 +403,7 @@ function sensorInput(dt, now){
     if (m > 1.1) { learnSum[0] += l[0] * dt; learnSum[1] += l[1] * dt; learnSum[2] += l[2] * dt; learnT += dt; }
     if ((m <= 0.6 && learnT > 0.35) || learnT > 1.2) {
       const L = Math.hypot(learnSum[0], learnSum[1], learnSum[2]);
-      if (L > 0.15) { fwd = learnSum.map(v => v / L); el.flip.checked = false; refreshHint(); }
+      if (L > 0.15) { fwd = learnSum.map(v => v / L); el.flip.checked = false; }
       learnSum = [0, 0, 0]; learnT = 0;
     }
     return 0;
@@ -323,28 +412,14 @@ function sensorInput(dt, now){
 }
 
 function checkMotionStatus(now){
+  if (S.motionTxt === 'Motion: blocked') return;
   let txt, st;
   if (!motion.have) {
-    if (now - S.t0 > 2500) {
-      txt = 'Motion: unavailable'; st = 'warn';
-      if (!S.autoManual) { S.autoManual = true; setMode('manual'); }
-    } else { txt = 'Motion: waiting'; st = 'off'; }
+    const late = now - S.tm > 2500;
+    txt = late ? 'Motion: unavailable' : 'Motion: waiting'; st = late ? 'warn' : 'off';
   } else if (now - motion.at > 800) { txt = 'Motion: no signal'; st = 'warn'; }
   else { txt = 'Motion: live'; st = 'ok'; }
   if (txt !== S.motionTxt) { S.motionTxt = txt; chip(el.cMotion, txt, st); }
-}
-
-function startGPS(){
-  if (!navigator.geolocation) { chip(el.cGps, 'GPS: unsupported', 'warn'); return; }
-  try {
-    gpsId = navigator.geolocation.watchPosition(p => {
-      const v = p.coords.speed;
-      if (v != null && !isNaN(v)) { gps.ok = true; gps.at = performance.now(); gps.speed = v; chip(el.cGps, 'GPS: live', 'ok'); }
-      else chip(el.cGps, 'GPS: no speed', 'warn');
-    }, () => { chip(el.cGps, 'GPS: off', 'warn'); },
-    {enableHighAccuracy: true, maximumAge: 500, timeout: 15000});
-    chip(el.cGps, 'GPS: waiting', 'off');
-  } catch (e) { chip(el.cGps, 'GPS: off', 'warn'); }
 }
 
 async function lockScreen(){
@@ -359,16 +434,35 @@ function tick(){
   S.last = now;
   if (ctx && ctx.state === 'suspended') ctx.resume();
   const E = ENGINES[S.eng], span = E.red - E.idle;
+  const full = Math.max(0.5, el.sens.value / 100 * G);
+  const fromAccel = a => clamp((a - 0.25) / (full - 0.25), 0, 1);
+  const brakeOf = a => clamp((-a - 0.5) / (0.3 * G), 0, 1);
+  const gpsFresh = gps.ok && now - gps.at < 3500;
 
   let thrIn = 0, brkIn = 0;
-  if (S.mode === 'sensor') {
+  if (S.mode === 'gps') {
+    // Speed follows the GPS fix, nudged ahead by the latest acceleration between fixes.
+    if (gpsFresh) {
+      const age = Math.min(1.2, (now - gps.at) / 1000);
+      S.aS += (gps.acc - S.aS) * (1 - Math.exp(-dt / 0.25));
+      const target = Math.max(0, gps.speed + gps.acc * age);
+      S.spd += (target - S.spd) * (1 - Math.exp(-dt / 0.3));
+    } else {
+      S.aS *= Math.pow(0.1, dt);
+      S.spd = Math.max(0, S.spd - (0.12 + 0.0009 * S.spd * S.spd) * dt);
+    }
+    thrIn = fromAccel(S.aS); brkIn = brakeOf(S.aS);
+    // Holding speed still takes some throttle, so cruising does not fall back to idle.
+    if (S.spd > 1.5 && S.aS > -0.35) {
+      const cruise = 0.7 * (0.12 + 0.0009 * S.spd * S.spd) / (5.5 * Math.max(0.25, 1 - S.spd / 60));
+      thrIn = Math.max(thrIn, Math.min(0.4, cruise));
+    }
+  } else if (S.mode === 'motion') {
     const acc = sensorInput(dt, now);
     if (acc === null) S.aS *= Math.pow(0.1, dt);
     else {
       S.aS += (acc - S.aS) * (1 - Math.exp(-dt / 0.12));
-      const full = Math.max(0.5, el.sens.value / 100 * G);
-      thrIn = clamp((S.aS - 0.25) / (full - 0.25), 0, 1);
-      brkIn = clamp((-S.aS - 0.5) / (0.3 * G), 0, 1);
+      thrIn = fromAccel(S.aS); brkIn = brakeOf(S.aS);
     }
     checkMotionStatus(now);
   } else thrIn = el.pedal.value / 100;
@@ -376,11 +470,13 @@ function tick(){
   S.thr += (thrIn - S.thr) * (1 - Math.exp(-dt / (thrIn > S.thr ? 0.07 : 0.22)));
   S.brk += (brkIn - S.brk) * (1 - Math.exp(-dt / 0.1));
 
-  // Virtual drivetrain: speed follows throttle, with GPS speed taking over when it is live.
-  const vAcc = S.thr * 5.5 * Math.max(0.25, 1 - S.spd / 60) - (0.12 + 0.0009 * S.spd * S.spd) - S.brk * 6;
-  S.spd = Math.max(0, S.spd + vAcc * dt);
-  if (S.mode === 'sensor' && gps.ok && now - gps.at < 3000) S.spd += (gps.speed - S.spd) * Math.min(1, dt * 3);
-  if (S.mode === 'manual') S.aS = (S.spd > 0 || vAcc > 0) ? vAcc : 0;
+  if (S.mode !== 'gps') {
+    // Virtual drivetrain: speed follows throttle, with GPS speed taking over when it is live.
+    const vAcc = S.thr * 5.5 * Math.max(0.25, 1 - S.spd / 60) - (0.12 + 0.0009 * S.spd * S.spd) - S.brk * 6;
+    S.spd = Math.max(0, S.spd + vAcc * dt);
+    if (S.mode === 'motion' && gpsFresh) S.spd += (gps.speed - S.spd) * Math.min(1, dt * 3);
+    if (S.mode === 'pedal') S.aS = (S.spd > 0 || vAcc > 0) ? vAcc : 0;
+  }
 
   // Automatic gearbox.
   const rpmIn = g => S.spd * 0.94 * E.red / VMAX[g];
@@ -406,7 +502,6 @@ function tick(){
   const wobble = S.rpm < E.idle * 1.15 ? Math.sin(now / 310) * 9 + Math.sin(now / 97) * 5 : 0;
   S.rpm += wobble * dt * 6;
 
-  if (S.mode === 'sensor') el.pedal.value = Math.round(S.thr * 100);
   updateAudio();
 }
 
@@ -465,6 +560,8 @@ function ui(){
   const ag = S.aS / G, w = clamp(Math.abs(ag) / 0.6, 0, 1) * 50;
   el.accFill.style.left = (ag >= 0 ? 50 : 50 - w) + '%'; el.accFill.style.width = w + '%';
   el.accVal.textContent = (ag > 0.005 ? '+' : ag < -0.005 ? '-' : '') + Math.abs(ag).toFixed(2) + ' g';
+  const h = hintText();
+  if (h !== lastHint) { lastHint = h; el.hint.textContent = h; }
 }
 function frame(){ draw(); ui(); requestAnimationFrame(frame); }
 
@@ -475,31 +572,22 @@ async function start(){
   if (!buildAudio()) { el.hint.textContent = 'This browser cannot play synthesized audio.'; el.start.disabled = false; return; }
   ctx.resume();
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
-  let perm = 'granted';
-  try {
-    const D = window.DeviceMotionEvent;
-    if (D && typeof D.requestPermission === 'function') perm = await D.requestPermission();
-  } catch (e) { perm = 'denied'; }
-
-  S.autoManual = false; S.motionTxt = ''; motion.have = false; gLP = null;
-  if (perm === 'granted') { window.addEventListener('devicemotion', onMotion); setMode('sensor'); chip(el.cMotion, 'Motion: waiting', 'off'); }
-  else { S.autoManual = true; setMode('manual'); S.motionTxt = 'Motion: blocked'; chip(el.cMotion, 'Motion: blocked', 'warn'); }
-
-  S.running = true;
-  S.t0 = S.last = performance.now();
+  S.running = true; S.motionTxt = '';
+  S.last = performance.now();
   timer = setInterval(tick, 20);
-  startGPS();
-  lockScreen();
-  el.start.setAttribute('aria-pressed', 'true'); el.start.textContent = 'Stop engine'; el.start.disabled = false;
+  el.start.setAttribute('aria-pressed', 'true'); el.start.textContent = 'Stop engine';
   chip(el.cAudio, 'Audio: on', 'ok');
-  refreshHint();
+  lockScreen();
+  await syncSensors();
+  el.start.disabled = false;
 }
 
 function stop(){
   S.running = false;
   clearInterval(timer); timer = null;
-  window.removeEventListener('devicemotion', onMotion);
-  if (gpsId !== null && navigator.geolocation) { try { navigator.geolocation.clearWatch(gpsId); } catch (e) {} gpsId = null; }
+  if (motionOn) { window.removeEventListener('devicemotion', onMotion); motionOn = false; }
+  motion.have = false; S.motionTxt = '';
+  stopGPS();
   if (wl) { try { wl.release(); } catch (e) {} wl = null; }
   if (A && ctx) {
     A.eng.gain.cancelScheduledValues(ctx.currentTime);
@@ -508,10 +596,8 @@ function stop(){
   }
   A = null; ctx = null;
   Object.assign(S, {thr: 0, brk: 0, spd: 0, aS: 0, gear: 1, rpm: ENGINES[S.eng].idle});
-  motion.have = false; gps.ok = false;
   el.start.setAttribute('aria-pressed', 'false'); el.start.textContent = 'Start engine';
-  chip(el.cAudio, 'Audio: off', 'off'); chip(el.cMotion, 'Motion: off', 'off'); chip(el.cGps, 'GPS: off', 'off');
-  refreshHint();
+  chip(el.cAudio, 'Audio: off', 'off'); chip(el.cMotion, 'Motion: off', 'off');
 }
 
 /* ---------- controls ---------- */
@@ -519,7 +605,6 @@ function applyMount(){
   const v = el.mount.value;
   learnSum = [0, 0, 0]; learnT = 0;
   fwd = v === 'learn' ? null : v === 'upright' ? [0, 0, -1] : v === 'flatFwd' ? [0, 1, 0] : [0, -1, 0];
-  refreshHint();
 }
 
 el.start.addEventListener('click', start);
@@ -529,7 +614,7 @@ el.engSeg.addEventListener('click', e => {
   if (!S.running) S.rpm = ENGINES[S.eng].idle;
 });
 el.inSeg.addEventListener('click', e => { const b = e.target.closest('button'); if (b) setMode(b.dataset.v); });
-['pointerup', 'pointercancel', 'touchend'].forEach(ev => el.pedal.addEventListener(ev, () => { if (S.mode === 'manual') el.pedal.value = 0; }));
+['pointerup', 'pointercancel', 'touchend'].forEach(ev => el.pedal.addEventListener(ev, () => { if (S.mode === 'pedal') el.pedal.value = 0; }));
 el.vol.addEventListener('input', () => {
   el.volVal.textContent = el.vol.value + '%';
   if (A && ctx) A.master.gain.setTargetAtTime(volGain(), ctx.currentTime, 0.02);
@@ -539,7 +624,7 @@ el.sens.addEventListener('input', () => { el.sensVal.textContent = (el.sens.valu
 el.mount.addEventListener('change', () => { applyMount(); ls.set('ce.mount', el.mount.value); });
 el.flip.addEventListener('change', () => ls.set('ce.flip', el.flip.checked ? '1' : '0'));
 
-// Restore saved settings.
+// Restore saved settings. Car GPS is the default when nothing is saved.
 (function init(){
   const e = ls.get('ce.eng'); if (e && ENGINES[e]) S.eng = e;
   const v = ls.get('ce.vol'); if (v !== null && !isNaN(+v)) el.vol.value = clamp(+v, 0, 100);
@@ -551,7 +636,8 @@ el.flip.addEventListener('change', () => ls.set('ce.flip', el.flip.checked ? '1'
   el.volVal.textContent = el.vol.value + '%';
   el.sensVal.textContent = (el.sens.value / 100).toFixed(2) + ' g';
   applyMount();
-  setMode('sensor');
+  const md = ls.get('ce.mode');
+  setMode(md && MODES.includes(md) ? md : 'gps');
   requestAnimationFrame(frame);
 })();
 })();
